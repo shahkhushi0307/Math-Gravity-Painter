@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { Dimensions, Platform, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,6 +16,25 @@ import colors from "@/constants/colors";
 
 const { width, height } = Dimensions.get("window");
 
+// Level-specific hint texts
+const LEVEL_HINTS: Record<string, string> = {
+  "w1l1": "Draw a curved ramp from the ball toward the stars, then sweep up to the portal.",
+  "w1l2": "Use the platform as a base — draw a path that bounces off it toward both stars.",
+  "w1l3": "Draw a zigzag path to collect the upper star first, then curve down to the portal.",
+  "w1l4": "Three stars need one smooth arc — try a wide sweeping S-curve across the canvas.",
+  "w1l5": "Start your line above the platform and arc it gently toward the portal.",
+  "w2l1": "Draw a diagonal line from the ball down to the stars, then angle toward the portal.",
+  "w2l2": "Use the platform edge — draw a ramp that launches the ball across.",
+  "w3l1": "Geometry world: try drawing a perfect straight line from start to portal.",
+  "w4l1": "Algebra world: mirror your path — equal distance on both sides of the center.",
+  "w5l1": "Probability zone: try multiple short lines to guide the ball step by step.",
+};
+
+function getHint(worldId: number, levelNumber: number): string {
+  const key = `w${worldId}l${levelNumber}`;
+  return LEVEL_HINTS[key] ?? `Draw a path from the ball 🔵 through the stars ⭐ to the portal 🌀. Press LAUNCH when ready!`;
+}
+
 export default function GameScreen() {
   const { worldId, levelNumber } = useLocalSearchParams<{ worldId: string; levelNumber: string }>();
   const router = useRouter();
@@ -29,10 +48,10 @@ export default function GameScreen() {
   const challenges = MATH_CHALLENGES[wid] ?? MATH_CHALLENGES[1];
   const challenge = challenges[Math.min(lnum - 1, challenges.length - 1)];
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const headerH = topPad + 60;
-  const canvasH = Math.max(height - headerH - bottomPad, 300);
+  const topPad = Platform.OS === "web" ? 0 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 0 : insets.bottom;
+  const headerH = topPad + 52;
+  const canvasH = Math.max(height - headerH - bottomPad - 110, 300); // 110 = toolbar room
   const canvasW = width;
 
   const [selectedTool, setSelectedTool] = useState<DrawTool>("pencil");
@@ -71,7 +90,7 @@ export default function GameScreen() {
     completeLevelAction(`w${wid}l${lnum}`, stars, coins);
     setTimeout(() => {
       router.replace({ pathname: "/complete", params: { worldId: wid, levelNumber: lnum, stars, coins } });
-    }, 400);
+    }, 500);
   }, [gameComplete, totalStars, wid, lnum]);
 
   const handleMathNeeded = useCallback(() => {
@@ -88,20 +107,21 @@ export default function GameScreen() {
     answerQuestion(false);
   }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setIsLaunched(false);
+    setGameComplete(false);
     setCollectedCount(0);
     collectedCountRef.current = 0;
     setHasPath(false);
     setShowHint(false);
     setShouldReset(true);
-  };
+  }, []);
 
-  const handleLaunch = () => {
+  const handleLaunch = useCallback(() => {
     if (hasPath && !isLaunched) {
       setIsLaunched(true);
     }
-  };
+  }, [hasPath, isLaunched]);
 
   if (!level) {
     return (
@@ -111,38 +131,54 @@ export default function GameScreen() {
     );
   }
 
+  const hintText = getHint(wid, lnum);
+
   return (
     <View style={styles.root}>
       {/* Header */}
       <LinearGradient
-        colors={[colors.background, "transparent"]}
-        style={[styles.header, { paddingTop: topPad + 8 }]}
+        colors={[colors.background + "FF", colors.background + "00"] as any}
+        style={[styles.header, { paddingTop: topPad + 10, height: headerH }]}
         pointerEvents="box-none"
       >
-        <Feather name="chevron-left" size={26} color={colors.white} onPress={() => router.back()} style={styles.backBtn} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="chevron-left" size={26} color={colors.white} />
+        </Pressable>
+
         <View style={styles.headerCenter}>
-          <Text style={[styles.levelLabel, { color: world.color }]}>{world.emoji} Level {lnum}</Text>
+          <Text style={[styles.levelLabel, { color: world.color }]}>{world.emoji} {world.name}</Text>
+          <Text style={styles.levelSub}>Level {lnum}</Text>
         </View>
-        <View style={styles.starsDisplay}>
-          {Array.from({ length: totalStars }).map((_, i) => (
-            <Feather
-              key={i}
-              name="star"
-              size={18}
-              color={i < collectedCount ? colors.gold : colors.textDim}
-            />
-          ))}
-        </View>
-        {mathSolved && (
-          <View style={[styles.solvedBadge, { backgroundColor: colors.green + "30" }]}>
-            <Feather name="check-circle" size={13} color={colors.green} />
-            <Text style={styles.solvedText}>Solved!</Text>
+
+        <View style={styles.headerRight}>
+          {/* Stars collected */}
+          <View style={styles.starsDisplay}>
+            {Array.from({ length: totalStars }).map((_, i) => (
+              <Feather
+                key={i}
+                name="star"
+                size={16}
+                color={i < collectedCount ? colors.gold : colors.textDim}
+              />
+            ))}
           </View>
-        )}
+          {/* Math status */}
+          {mathSolved ? (
+            <View style={styles.solvedBadge}>
+              <Feather name="check-circle" size={12} color={colors.green} />
+              <Text style={styles.solvedText}>Math ✓</Text>
+            </View>
+          ) : (
+            <Pressable onPress={() => setMathVisible(true)} style={styles.mathBadge}>
+              <Feather name="zap" size={12} color={world.color} />
+              <Text style={[styles.mathBadgeText, { color: world.color }]}>Math</Text>
+            </Pressable>
+          )}
+        </View>
       </LinearGradient>
 
       {/* Game Canvas */}
-      <View style={[styles.canvasContainer, { backgroundColor: world.color + "08" }]}>
+      <View style={[styles.canvasWrap, { marginTop: headerH - 20, backgroundColor: world.color + "06" }]}>
         <GameCanvas
           level={level}
           selectedTool={selectedTool}
@@ -160,36 +196,32 @@ export default function GameScreen() {
           onPathDrawn={setHasPath}
           shouldReset={shouldReset}
           onResetDone={() => setShouldReset(false)}
+          hintText={hintText}
         />
-
-        {/* Floating Toolbar */}
-        <FloatingToolbar
-          selectedTool={selectedTool}
-          onSelectTool={setSelectedTool}
-          onUndo={() => {}} // handled inside canvas via key prop approach
-          onClear={handleReset}
-          onLaunch={handleLaunch}
-          onHint={() => setShowHint(v => !v)}
-          canLaunch={hasPath && !isLaunched}
-          isLaunched={isLaunched}
-        />
-
-        {/* Reset button when launched */}
-        {isLaunched && !gameComplete && (
-          <View style={styles.resetRow}>
-            <Feather name="rotate-ccw" size={22} color={colors.white} onPress={handleReset} style={styles.resetBtn} />
-          </View>
-        )}
-
-        {/* Math hint bar */}
-        {!mathSolved && (
-          <View style={[styles.mathBar, { borderColor: world.color + "40" }]}>
-            <Feather name="lock" size={13} color={world.color} />
-            <Text style={[styles.mathBarText, { color: world.color }]}>Tap portal to solve math!</Text>
-            <Feather name="zap" size={13} color={world.color} onPress={() => setMathVisible(true)} />
-          </View>
-        )}
       </View>
+
+      {/* Floating Toolbar */}
+      <FloatingToolbar
+        selectedTool={selectedTool}
+        onSelectTool={setSelectedTool}
+        onUndo={() => {}}
+        onClear={handleReset}
+        onLaunch={handleLaunch}
+        onHint={() => setShowHint(v => !v)}
+        canLaunch={hasPath && !isLaunched}
+        isLaunched={isLaunched}
+        showHint={showHint}
+      />
+
+      {/* Reset button when ball is in flight */}
+      {isLaunched && !gameComplete && (
+        <View style={styles.resetRow} pointerEvents="box-none">
+          <Pressable onPress={handleReset} style={styles.resetBtn}>
+            <Feather name="rotate-ccw" size={18} color={colors.white} />
+            <Text style={styles.resetText}>Reset</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Math Challenge Modal */}
       <MathChallengeModal
@@ -213,40 +245,63 @@ const styles = StyleSheet.create({
     zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 14,
     gap: 10,
   },
-  backBtn: { padding: 4 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.card + "AA",
+    borderRadius: 20,
+  },
   headerCenter: { flex: 1 },
-  levelLabel: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  starsDisplay: { flexDirection: "row", gap: 4 },
+  levelLabel: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  levelSub: { fontSize: 11, color: colors.textMuted, fontFamily: "Inter_500Medium" },
+  headerRight: { alignItems: "flex-end", gap: 4 },
+  starsDisplay: { flexDirection: "row", gap: 3 },
   solvedBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    backgroundColor: colors.green + "25",
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  solvedText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.green },
-  canvasContainer: { flex: 1 },
-  resetRow: { position: "absolute", top: 20, right: 16, zIndex: 5 },
-  resetBtn: { padding: 8, backgroundColor: colors.card + "AA", borderRadius: 16 },
-  mathBar: {
+  solvedText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: colors.green },
+  mathBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.card,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  mathBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  canvasWrap: { flex: 1 },
+  resetRow: {
     position: "absolute",
-    top: 14,
-    alignSelf: "center",
+    bottom: 110,
+    right: 16,
+    zIndex: 20,
+  },
+  resetBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: colors.card + "EE",
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
+    borderColor: colors.border,
   },
-  mathBarText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  resetText: { fontSize: 13, color: colors.white, fontFamily: "Inter_600SemiBold" },
   errorView: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   errorText: { color: colors.white, fontSize: 18 },
 });

@@ -28,6 +28,7 @@ interface FloatingToolbarProps {
   onHint: () => void;
   canLaunch: boolean;
   isLaunched: boolean;
+  showHint: boolean;
 }
 
 export function FloatingToolbar({
@@ -39,6 +40,7 @@ export function FloatingToolbar({
   onHint,
   canLaunch,
   isLaunched,
+  showHint,
 }: FloatingToolbarProps) {
   const [expanded, setExpanded] = useState(false);
   const expandAnim = useRef(new Animated.Value(0)).current;
@@ -49,38 +51,59 @@ export function FloatingToolbar({
     setExpanded(!expanded);
   };
 
-  const toolHeight = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 240] });
-  const toolOpacity = expandAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
+  const selectTool = (tool: DrawTool) => {
+    onSelectTool(tool);
+    setExpanded(false);
+    Animated.spring(expandAnim, { toValue: 0, useNativeDriver: true }).start();
+  };
+
+  const toolHeight = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 260] });
+  const toolOpacity = expandAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0, 1] });
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Tools Panel */}
-      <Animated.View style={[styles.toolPanel, { maxHeight: toolHeight, opacity: toolOpacity, overflow: "hidden" }]}>
+      {/* Expandable tools panel */}
+      <Animated.View style={[styles.toolPanel, { maxHeight: toolHeight, opacity: toolOpacity }]}>
         {TOOLS.map(tool => (
           <Pressable
             key={tool.id}
-            onPress={() => { onSelectTool(tool.id); setExpanded(false); Animated.spring(expandAnim, { toValue: 0, useNativeDriver: true }).start(); }}
-            style={[styles.toolBtn, selectedTool === tool.id && { backgroundColor: tool.color + "30", borderColor: tool.color }]}
+            onPress={() => selectTool(tool.id)}
+            style={[
+              styles.toolBtn,
+              selectedTool === tool.id && { backgroundColor: tool.color + "30", borderColor: tool.color },
+            ]}
           >
             <Feather name={tool.icon} size={18} color={selectedTool === tool.id ? tool.color : colors.textMuted} />
+            <Text style={[styles.toolLabel, selectedTool === tool.id && { color: tool.color }]}>{tool.label}</Text>
           </Pressable>
         ))}
         <View style={styles.divider} />
         <Pressable onPress={onUndo} style={styles.toolBtn}>
           <Feather name="corner-left-up" size={18} color={colors.textMuted} />
+          <Text style={styles.toolLabel}>Undo</Text>
         </Pressable>
         <Pressable onPress={onClear} style={styles.toolBtn}>
           <Feather name="trash-2" size={18} color={colors.red} />
-        </Pressable>
-        <Pressable onPress={onHint} style={styles.toolBtn}>
-          <Feather name="help-circle" size={18} color={colors.gold} />
+          <Text style={[styles.toolLabel, { color: colors.red }]}>Clear</Text>
         </Pressable>
       </Animated.View>
 
-      {/* Toggle Button */}
+      {/* Bottom action row */}
       <View style={styles.bottomRow}>
-        <Pressable onPress={toggle} style={styles.toggleBtn}>
+        {/* Draw tools toggle */}
+        <Pressable
+          onPress={toggle}
+          style={[styles.iconBtn, { backgroundColor: expanded ? colors.primaryLight : colors.primary }]}
+        >
           <Feather name={expanded ? "x" : "edit-2"} size={22} color={colors.white} />
+        </Pressable>
+
+        {/* Hint button — always visible */}
+        <Pressable
+          onPress={onHint}
+          style={[styles.iconBtn, { backgroundColor: showHint ? colors.gold : colors.card, borderColor: colors.gold + "60", borderWidth: 1.5 }]}
+        >
+          <Feather name="help-circle" size={22} color={showHint ? colors.background : colors.gold} />
         </Pressable>
 
         {/* Launch Button */}
@@ -104,8 +127,8 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 16,
     right: 16,
-    alignItems: "flex-end",
-    gap: 8,
+    alignItems: "flex-start",
+    gap: 10,
   },
   toolPanel: {
     backgroundColor: colors.card + "EE",
@@ -114,43 +137,52 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: "hidden",
     alignSelf: "flex-start",
   },
   toolBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.border,
+    minWidth: 130,
+  },
+  toolLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: colors.textMuted,
   },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
   bottomRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     width: "100%",
+    gap: 10,
   },
-  toggleBtn: {
+  iconBtn: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
   },
   launchBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     backgroundColor: colors.green,
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 30,
     shadowColor: colors.green,

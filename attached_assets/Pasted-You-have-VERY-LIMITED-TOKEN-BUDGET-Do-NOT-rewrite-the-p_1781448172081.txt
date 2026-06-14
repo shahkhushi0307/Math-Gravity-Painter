@@ -1,0 +1,133 @@
+You have VERY LIMITED TOKEN BUDGET. Do NOT rewrite the project from scratch. Analyze the existing codebase first and make ONLY the necessary fixes. Implement all fixes in ONE PASS with production-quality code.
+
+PROJECT: Math Gravity Painter (Godot 4)
+
+CRITICAL ISSUES TO FIX:
+
+### 1. Level 1 Paint Area Not Scrollable
+
+Problem:
+
+* When Level 1 starts, the paint/drawing area cannot be scrolled or panned.
+* Players cannot view the full canvas.
+* This makes level completion difficult.
+
+Requirements:
+
+* Enable smooth camera/canvas scrolling.
+* Support drag-to-pan on desktop and mobile.
+* Prevent accidental drawing while panning.
+* Keep drawing performance smooth.
+* Ensure the entire level canvas can be reached.
+
+---
+
+### 2. Hint System Missing
+
+Problem:
+
+* Hint section/UI is not appearing.
+* Players have no guidance.
+
+Requirements:
+
+* Add visible Hint button/UI.
+* Display level-specific hints.
+* Hints should be easy to access but not intrusive.
+* Hint panel should open/close correctly.
+* Ensure Level 1 has a working hint.
+
+Example:
+Hint: "Draw a curved ramp to guide the ball into the portal."
+
+---
+
+### 3. Ball Not Painting Path Correctly
+
+Problem:
+
+* While moving from spawn point to portal, the ball is not interacting correctly with painted lines.
+* Physics feels broken or inconsistent.
+
+Requirements:
+
+* Verify collision layers and masks.
+* Ensure painted lines generate proper collision shapes.
+* Ball must roll smoothly on painted surfaces.
+* Remove jittering, clipping, and falling through lines.
+* Improve collision accuracy.
+
+---
+
+### 4. Ball Movement Problems
+
+Problem:
+
+* Ball movement is not natural.
+* Sometimes gets stuck.
+* Sometimes ignores drawn paths.
+
+Requirements:
+
+* Fix rigid body physics.
+* Improve friction and bounce values.
+* Ensure gravity affects ball consistently.
+* Ball should reliably follow user-created paths.
+* Test with multiple line shapes.
+
+---
+
+### 5. Portal Completion Detection
+
+Problem:
+
+* Ball reaching portal does not always trigger level completion.
+
+Requirements:
+
+* Ensure portal detection works 100%.
+* Use proper Area2D collision detection.
+* Trigger level complete screen consistently.
+* Prevent false positives.
+
+---
+
+### 6. UI Validation
+
+Verify all of the following:
+
+* Draw button works.
+* Erase button works.
+* Hint button works.
+* Reset level works.
+* Pause works.
+* Level completion popup works.
+
+---
+
+### IMPORTANT IMPLEMENTATION RULES
+
+1. First inspect existing architecture.
+2. Reuse existing systems whenever possible.
+3. Do NOT create duplicate scripts.
+4. Do NOT refactor unrelated code.
+5. Preserve current project structure.
+6. Fix only what is necessary.
+7. After implementation, provide:
+
+   * List of modified files.
+   * Exact fixes performed.
+   * Any remaining known issues.
+8. Test all fixes together before finalizing.
+
+Goal:
+Deliver a fully playable Level 1 experience where:
+
+* Canvas is scrollable.
+* Hint system is visible.
+* Drawing creates reliable physics paths.
+* Ball rolls naturally.
+* Portal detection works consistently.
+* No major gameplay blockers remain.
+
+Think carefully before editing files because token budget is limited. Make targeted, high-impact fixes only and complete everything in a single implementation pass.
