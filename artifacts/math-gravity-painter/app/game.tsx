@@ -82,14 +82,26 @@ export default function GameScreen() {
   }, []);
 
   const handlePortalReached = useCallback(() => {
+    console.log("[game.tsx] handlePortalReached triggered. current gameComplete:", gameComplete);
     if (gameComplete) return;
     setGameComplete(true);
     const stars = collectedCountRef.current >= totalStars ? 3
       : collectedCountRef.current >= Math.ceil(totalStars / 2) ? 2 : 1;
     const coins = stars * 10 + lnum * 5;
+    console.log(`[game.tsx] Completing level internally. Level: w${wid}l${lnum}, Stars: ${stars}, Coins: ${coins}`);
     completeLevelAction(`w${wid}l${lnum}`, stars, coins);
+    console.log("[game.tsx] completeLevelAction finished. Navigating to /complete in 500ms");
     setTimeout(() => {
-      router.replace({ pathname: "/complete", params: { worldId: wid, levelNumber: lnum, stars, coins } });
+      console.log(`[game.tsx] Executing router.replace to /complete with stringified params: worldId=${wid}, levelNumber=${lnum}, stars=${stars}, coins=${coins}`);
+      router.replace({
+        pathname: "/complete",
+        params: {
+          worldId: String(wid),
+          levelNumber: String(lnum),
+          stars: String(stars),
+          coins: String(coins)
+        }
+      });
     }, 500);
   }, [gameComplete, totalStars, wid, lnum]);
 
@@ -197,6 +209,7 @@ export default function GameScreen() {
           shouldReset={shouldReset}
           onResetDone={() => setShouldReset(false)}
           hintText={hintText}
+          gameComplete={gameComplete}
         />
       </View>
 

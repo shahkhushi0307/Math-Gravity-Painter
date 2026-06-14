@@ -27,10 +27,24 @@ export default function CompleteScreen() {
   const world = WORLDS.find(w => w.id === wid) ?? WORLDS[0];
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
-  const starAnims = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  const starAnim0 = useRef(new Animated.Value(0)).current;
+  const starAnim1 = useRef(new Animated.Value(0)).current;
+  const starAnim2 = useRef(new Animated.Value(0)).current;
+  const starAnims = [starAnim0, starAnim1, starAnim2];
   const confettiAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    console.log("[CompleteScreen] Mounted. Params received:", {
+      worldId,
+      levelNumber,
+      starsParam,
+      coinsParam,
+    }, "Parsed values:", {
+      wid,
+      lnum,
+      stars,
+      coins,
+    });
     Animated.sequence([
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
       Animated.stagger(200, starAnims.map(a =>

@@ -26,6 +26,7 @@ interface GameCanvasProps {
   shouldReset: boolean;
   onResetDone: () => void;
   hintText?: string;
+  gameComplete: boolean;
 }
 
 function samplePath(pts: Point[], maxPts: number): Point[] {
@@ -79,6 +80,7 @@ export function GameCanvas({
   level, selectedTool, showHint, mathSolved, portalColor, ballColor,
   onStarCollected, onPortalReached, onMathNeeded, isLaunched, setIsLaunched,
   canvasWidth, canvasHeight, onPathDrawn, shouldReset, onResetDone, hintText,
+  gameComplete,
 }: GameCanvasProps) {
   const scale = { x: canvasWidth, y: canvasHeight };
 
@@ -166,11 +168,14 @@ export function GameCanvas({
 
     // Portal
     if (!portalReachedRef.current && dist(pt, portalPos) < PORTAL_REACH_R) {
+      console.log(`[GameCanvas] Ball close to portal. Distance: ${dist(pt, portalPos)}, Portal reach radius: ${PORTAL_REACH_R}. mathSolved: ${mathSolved}`);
       portalReachedRef.current = true;
       if (!mathSolved) {
+        console.log("[GameCanvas] Math not solved yet. Triggering onMathNeeded");
         onMathNeeded();
         portalReachedRef.current = false; // allow re-detection after solving
       } else {
+        console.log("[GameCanvas] Math solved! Stopping animations and calling onPortalReached");
         animRef.current?.stop();
         gravAnimRef.current?.stop();
         onPortalReached();
@@ -179,6 +184,7 @@ export function GameCanvas({
   }, [scaledStars, portalPos, mathSolved]);
 
   const applyGravity = useCallback((startPt: Point) => {
+    if (gameComplete) return;
     const arcPts = buildGravityArc(startPt, portalPos, canvasHeight);
     if (arcPts.length < 2) return;
 
@@ -203,6 +209,7 @@ export function GameCanvas({
   }, [portalPos, canvasHeight, checkCollisions]);
 
   const launchBall = useCallback(() => {
+    if (gameComplete) return;
     const allPoints = paths.flatMap(p =>
       p.tool === "eraser" ? [] : p.points
     );
@@ -253,10 +260,10 @@ export function GameCanvas({
   }, [isLaunched]);
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => !isLaunched,
-    onMoveShouldSetPanResponder: () => !isLaunched,
+    onStartShouldSetPanResponder: () => !isLaunched && !gameComplete,
+    onMoveShouldSetPanResponder: () => !isLaunched && !gameComplete,
     onPanResponderGrant: (e) => {
-      if (isLaunched) return;
+      if (isLaunched || gameComplete) return;
       const { locationX, locationY } = e.nativeEvent;
       if (selectedTool === "eraser") {
         setCurrentPoints([{ x: locationX, y: locationY }]);
@@ -265,12 +272,12 @@ export function GameCanvas({
       }
     },
     onPanResponderMove: (e) => {
-      if (isLaunched) return;
+      if (isLaunched || gameComplete) return;
       const { locationX, locationY } = e.nativeEvent;
       setCurrentPoints(prev => [...prev, { x: locationX, y: locationY }]);
     },
     onPanResponderRelease: () => {
-      if (isLaunched) return;
+      if (isLaunched || gameComplete) return;
       setCurrentPoints(prev => {
         if (prev.length > 1) {
           if (selectedTool === "eraser") {
